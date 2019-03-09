@@ -3,7 +3,6 @@ package parcel;
 import haxe.Serializer;
 import haxe.Json;
 import haxe.io.Bytes;
-import sys.io.File;
 import tink.Cli;
 import format.png.Tools;
 import format.png.Reader;
@@ -16,11 +15,13 @@ import uk.aidanlee.flurry.api.resources.Parcel.TextInfo;
 import uk.aidanlee.flurry.api.resources.Parcel.BytesInfo;
 import uk.aidanlee.flurry.api.resources.Parcel.ParcelList;
 import uk.aidanlee.flurry.api.resources.Parcel.ResourceInfo;
+import sys.io.abstractions.concrete.FileSystem;
+import sys.io.abstractions.IFileSystem;
 
 using Safety;
 
 /**
- * 
+ * Capable of creating and extracting binary compressed flurry parcels.
  */
 class Main
 {
@@ -59,13 +60,19 @@ class Main
     @:flag('--verbose')
     public var verbose : Bool;
 
-    public function new()
+    /**
+     * Abstracted access to the hard drive for easy testing.
+     */
+    final fileSystem : IFileSystem;
+
+    public function new(_fileSystem : Null<IFileSystem> = null)
     {
         json         = '';
         output       = 'output.parcel';
         compress     = false;
         ignoreHidden = false;
         verbose      = false;
+        fileSystem   = _fileSystem.or(new FileSystem());
     }
 
     /**
@@ -79,16 +86,7 @@ class Main
     @:defaultCommand
     public function create()
     {
-        /**
-         * If the resource info path is not defined we assume the id is also the path.
-         * @param _resource ResourceInfo to get the path for.
-         * @return String
-         */
-        inline function getResourceInfoPath(_resource : ResourceInfo) : String {
-            return _resource.path == null ? _resource.id : _resource.path;
-        }
-
-        var parcel : ParcelList = Json.parse(sys.io.File.getContent(json));
+        var parcel : ParcelList = Json.parse(fileSystem.file.getText(json));
 
         // Load and create resources for all the requested assets.
         // This chunck of asset loading and resource creation is basically identical to that found in the resource system.
@@ -99,52 +97,52 @@ class Main
         var assets : Array<BytesInfo> = parcel.bytes.or([]);
         for (asset in assets)
         {
-            resources.push(new BytesResource(asset.id, sys.io.File.getBytes(getResourceInfoPath(asset))));
+            resources.push(new BytesResource(asset.id, fileSystem.file.getBytes(getResourceInfoPath(asset))));
 
-            log('Bytes asset "${asset.id}" added', verbose);
+            log('Bytes asset "${asset.id}" added');
         }
 
         var assets : Array<TextInfo> = parcel.texts.or([]);
         for (asset in assets)
         {
-            resources.push(new TextResource(asset.id, sys.io.File.getContent(getResourceInfoPath(asset))));
+            resources.push(new TextResource(asset.id, fileSystem.file.getText(getResourceInfoPath(asset))));
 
-            log('Text asset "${asset.id}" added', verbose);
+            log('Text asset "${asset.id}" added');
         }
 
         var assets : Array<JSONInfo> = parcel.jsons.or([]);
         for (asset in assets)
         {
-            resources.push(new JSONResource(asset.id, Json.parse(sys.io.File.getContent(getResourceInfoPath(asset)))));
+            resources.push(new JSONResource(asset.id, Json.parse(fileSystem.file.getText(getResourceInfoPath(asset)))));
 
-            log('JSON asset "${asset.id}" added', verbose);
+            log('JSON asset "${asset.id}" added');
         }
 
         var assets : Array<ImageInfo> = parcel.images.or([]);
         for (asset in assets)
         {
-            var info = new Reader(File.read(getResourceInfoPath(asset))).read();
+            var info = new Reader(fileSystem.file.read(getResourceInfoPath(asset))).read();
             var head = Tools.getHeader(info);
 
             resources.push(new ImageResource(asset.id, head.width, head.height, Tools.extract32(info).getData()));
 
-            log('Image asset "${asset.id}" added', verbose);
+            log('Image asset "${asset.id}" added');
         }
 
         var assets : Array<ShaderInfo> = parcel.shaders.or([]);
         for (asset in assets)
         {
-            var layout = Json.parse(sys.io.File.getContent(getResourceInfoPath(asset)));
-            var sourceWebGL = asset.webgl == null ? null : { vertex : sys.io.File.getContent(asset.webgl.vertex), fragment : sys.io.File.getContent(asset.webgl.fragment) };
-            var sourceGL45  = asset.gl45  == null ? null : { vertex : sys.io.File.getContent(asset.gl45.vertex) , fragment : sys.io.File.getContent(asset.gl45.fragment) };
-            var sourceHLSL  = asset.hlsl  == null ? null : { vertex : sys.io.File.getContent(asset.hlsl.vertex) , fragment : sys.io.File.getContent(asset.hlsl.fragment) };
+            var layout = Json.parse(fileSystem.file.getText(getResourceInfoPath(asset)));
+            var sourceWebGL = asset.webgl == null ? null : { vertex : fileSystem.file.getText(asset.webgl.vertex), fragment : fileSystem.file.getText(asset.webgl.fragment) };
+            var sourceGL45  = asset.gl45  == null ? null : { vertex : fileSystem.file.getText(asset.gl45.vertex), fragment : fileSystem.file.getText(asset.gl45.fragment) };
+            var sourceHLSL  = asset.hlsl  == null ? null : { vertex : fileSystem.file.getText(asset.hlsl.vertex), fragment : fileSystem.file.getText(asset.hlsl.fragment) };
 
             resources.push(new ShaderResource(asset.id, layout, sourceWebGL, sourceGL45, sourceHLSL));
 
-            log('Shader asset "${asset.id}" added', verbose);
-            log('   webgl : ${asset.webgl != null}', verbose);
-            log('   gl45  : ${asset.gl45  != null}', verbose);
-            log('   hlsl  : ${asset.hlsl  != null}', verbose);
+            log('Shader asset "${asset.id}" added');
+            log('   webgl : ${asset.webgl != null}');
+            log('   gl45  : ${asset.gl45  != null}');
+            log('   hlsl  : ${asset.hlsl  != null}');
         }
 
         // Serialize the assets array and then optionally compress the bytes.
@@ -154,12 +152,14 @@ class Main
         serializer.serialize(resources);
 
         var arrayBytes = Bytes.ofString(serializer.toString());
-        log('Assets array serialized to ${arrayBytes.length} bytes', verbose);
+        
+        log('Assets array serialized to ${arrayBytes.length} bytes');
 
         if (compress)
         {
             arrayBytes = haxe.zip.Compress.run(arrayBytes, 9);
-            log('Assets array compressed to ${arrayBytes.length} bytes', verbose);
+
+            log('Assets array compressed to ${arrayBytes.length} bytes');
         }
 
         // The actual stored bytes is a ParcelData struct.
@@ -175,18 +175,29 @@ class Main
 
         // Write the final bytes to the specified file location.
 
-        sys.io.File.saveBytes(output, Bytes.ofString(serializer.toString()));
-        log('Parcel written to $output', verbose);
+        fileSystem.file.create(output);
+        fileSystem.file.writeBytes(output, Bytes.ofString(serializer.toString()));
+
+        log('Parcel written to $output');
+    }
+
+    /**
+     * If the resource info path is not defined we assume the id is also the path.
+     * @param _resource ResourceInfo to get the path for.
+     * @return String
+     */
+    inline function getResourceInfoPath(_resource : ResourceInfo) : String
+    {
+        return _resource.path.or(_resource.id);
     }
 
     /**
      * Print text if the verbose mode is enabled.
      * @param _message Message to print.
-     * @param _verbose If the verbose flag is set.
      */
-    static inline function log(_message : String, _verbose : Bool)
+    inline function log(_message : String)
     {
-        if (_verbose)
+        if (verbose)
         {
             Sys.println(_message);
         }

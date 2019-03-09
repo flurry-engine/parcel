@@ -1,6 +1,4 @@
 
--neko run.n
-
 -cp src
 -cp test
 
@@ -9,8 +7,9 @@
 -lib flurry
 -lib haxe-concurrent
 -lib format
+-lib sys.io.abstractions
 
 --macro nullSafety('parcel', Strict)
 --macro Safety.safeNavigation('parcel')
 
--main parcel.Main
+--run parcel.Main
