@@ -1,0 +1,17 @@
+-cp src
+-cp test
+
+-lib tink_cli
+-lib safety
+-lib flurry
+-lib haxe-concurrent
+-lib format
+-lib sys.io.abstractions
+-lib buddy
+
+--macro nullSafety('parcel', Strict)
+--macro Safety.safeNavigation('parcel')
+
+--main Main
+
+--interp
