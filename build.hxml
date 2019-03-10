@@ -1,6 +1,5 @@
 
 -cp src
--cp test
 
 -lib tink_cli
 -lib safety
@@ -12,4 +11,6 @@
 --macro nullSafety('parcel', Strict)
 --macro Safety.safeNavigation('parcel')
 
---run parcel.Main
+-main parcel.Main
+
+-neko run.n
