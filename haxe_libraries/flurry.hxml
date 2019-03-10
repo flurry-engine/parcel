@@ -1,4 +1,3 @@
--D Flurry=0.0.1
-# @install: lix --silent download "gh://github.com/flurry-engine/flurry#bd90d6e9d5f988ebed5db17b748ff387cfdaac50" into Flurry/0.0.1/github/bd90d6e9d5f988ebed5db17b748ff387cfdaac50
-# @run: haxelib run-dir Flurry ${HAXE_LIBCACHE}/Flurry/0.0.1/github/bd90d6e9d5f988ebed5db17b748ff387cfdaac50
--cp ${HAXE_LIBCACHE}/Flurry/0.0.1/github/bd90d6e9d5f988ebed5db17b748ff387cfdaac50/engine/src
+-D flurry=0.0.1
+# @install: lix --silent download "gh://github.com/flurry-engine/flurry#56835a327fef0a1039a4a693ba958795195a4032" into flurry/0.0.1/github/56835a327fef0a1039a4a693ba958795195a4032
+-cp ${HAXE_LIBCACHE}/flurry/0.0.1/github/56835a327fef0a1039a4a693ba958795195a4032/src
