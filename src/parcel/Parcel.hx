@@ -127,15 +127,15 @@ class Parcel
         for (asset in assets)
         {
             var layout = Json.parse(fileSystem.file.getText(getResourceInfoPath(asset)));
-            var sourceWebGL = asset.gl32 == null ? null : { vertex : fileSystem.file.getText(asset.gl32!.vertex.sure()), fragment : fileSystem.file.getText(asset.gl32!.fragment.sure()) };
-            var sourceGL45  = asset.gl45 == null ? null : { vertex : fileSystem.file.getText(asset.gl45!.vertex.sure()), fragment : fileSystem.file.getText(asset.gl45!.fragment.sure()) };
+            var sourceWebGL = asset.ogl3 == null ? null : { vertex : fileSystem.file.getText(asset.ogl3!.vertex.sure()), fragment : fileSystem.file.getText(asset.ogl3!.fragment.sure()) };
+            var sourceGL45  = asset.ogl4 == null ? null : { vertex : fileSystem.file.getText(asset.ogl4!.vertex.sure()), fragment : fileSystem.file.getText(asset.ogl4!.fragment.sure()) };
             var sourceHLSL  = asset.hlsl == null ? null : { vertex : fileSystem.file.getText(asset.hlsl!.vertex.sure()), fragment : fileSystem.file.getText(asset.hlsl!.fragment.sure()) };
 
             resources.push(new ShaderResource(asset.id, layout, sourceWebGL, sourceGL45, sourceHLSL));
 
             log('Shader asset "${asset.id}" added');
-            log('   webgl : ${asset.gl32 != null}');
-            log('   gl45  : ${asset.gl45 != null}');
+            log('   webgl : ${asset.ogl3 != null}');
+            log('   gl45  : ${asset.ogl4 != null}');
             log('   hlsl  : ${asset.hlsl != null}');
         }
 
