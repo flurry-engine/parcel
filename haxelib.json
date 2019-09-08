@@ -1,0 +1,14 @@
+{
+    "name": "parcel",
+    "license": "MIT",
+    "version": "0.0.1",
+    "classPath": "",
+    "contributors": [
+        "Aidan"
+    ],
+    "releasenote": "Initial release",
+    "dependencies": {
+        "hxp" : "",
+        "flurry" : ""
+    }
+}

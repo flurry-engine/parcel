@@ -1,16 +1,10 @@
 
 -cp src
+-cp scripts
 
--lib tink_cli
--lib safety
 -lib flurry
--lib haxe-concurrent
--lib format
--lib sys.io.abstractions
+-lib hxp
 
---macro nullSafety('parcel', Strict)
---macro Safety.safeNavigation('parcel')
-
--main parcel.Main
+-main Tool
 
 -neko run.n
