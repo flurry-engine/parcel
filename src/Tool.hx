@@ -212,7 +212,7 @@ class Tool
      */
     function hlslCompile(_vert : String, _frag : String) : Null<ShaderSource>
     {
-        if (Sys.systemName() == 'Windows')
+        if (Sys.systemName() != 'Windows')
         {
             Sys.println('Cannot compile HLSL shaders on non-windows platforms');
             Sys.println('    Creating un-compiled hlsl shader source');
