@@ -6,9 +6,5 @@
     "contributors": [
         "Aidan"
     ],
-    "releasenote": "Initial release",
-    "dependencies": {
-        "hxp" : "",
-        "flurry" : ""
-    }
+    "releasenote": "Initial release"
 }

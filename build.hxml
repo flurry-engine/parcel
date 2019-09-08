@@ -1,10 +1,8 @@
-
 -cp src
--cp scripts
 
 -lib flurry
--lib hxp
+-lib tink_cli
 
--main Tool
+-main Main
 
 -neko run.n

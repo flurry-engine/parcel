@@ -1,19 +1,11 @@
 -D flurry=0.0.1
-# @install: lix --silent download "gh://github.com/flurry-engine/flurry#46bbb036fe89ca5021f6d26bb83328d6b5d113b3" into flurry/0.0.1/github/46bbb036fe89ca5021f6d26bb83328d6b5d113b3
--lib hxcpp
--lib snow
--lib format
+# @install: lix --silent download "gh://github.com/flurry-engine/flurry#33814c94489d093ef6dc462762a3b9bc6cc1e6ba" into flurry/0.0.1/github/33814c94489d093ef6dc462762a3b9bc6cc1e6ba
 -lib haxe-concurrent
+-lib format
 -lib signals
 -lib safety
--lib exception
 -lib sys.io.abstractions
--lib linc_opengl
 -lib linc_imgui
--lib linc_sdl
--lib linc_stb
--lib linc_timestamp
 -lib linc_directx
 -lib json2object
--lib hxbit
--cp /home/aidan/Documents/Flurry/src
+-cp ${HAXE_LIBCACHE}/flurry/0.0.1/github/33814c94489d093ef6dc462762a3b9bc6cc1e6ba/src

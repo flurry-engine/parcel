@@ -1,7 +1,1 @@
-# This is a manually-created stub hxml.
--cp ${HOME}/.vscode/extensions/vshaxe.haxe-test-adapter-1.2.2/test-adapter
 
--lib json2object
-
-# From extraParams.hxml
---macro _testadapter.Macro.init()
