@@ -95,7 +95,7 @@ class Tool
             prepared[bytes.id] = new BytesResource(bytes.id, File.getBytes(bytes.path));
         }
 
-        FileSystem.deleteDirectory(temp);
+        clean(temp);
 
         for (parcel in assets.parcels)
         {
@@ -116,6 +116,10 @@ class Tool
         Sys.println('TODO : implement peek function');
     }
 
+    /**
+     * Parse the json file at the input file location.
+     * @return AssetsInfo
+     */
     function parse() : AssetsInfo
     {
         var parser = new JsonParser<AssetsInfo>();
@@ -230,5 +234,28 @@ class Tool
             true,
             File.getBytes(Path.join([ temp, 'vert.out' ])),
             File.getBytes(Path.join([ temp, 'frag.out' ])));
+    }
+
+    /**
+     * Remove an entire directory.
+     * @param _dir Directory to remove.
+     */
+    function clean(_dir : String)
+    {
+        for (item in FileSystem.readDirectory(_dir))
+        {
+            var path = Path.join([ _dir, item ]);
+            
+            if (FileSystem.isDirectory(path))
+            {
+                clean(path);
+            }
+            else
+            {
+                FileSystem.deleteFile(path);
+            }
+        }
+
+        FileSystem.deleteDirectory(temp);
     }
 }
