@@ -1,3 +1,0 @@
--D snow=1.0.0-alpha.1
-# @install: lix --silent download "haxelib:/snow#1.0.0-alpha.1" into snow/1.0.0-alpha.1/haxelib
--cp ${HAXE_LIBCACHE}/snow/1.0.0-alpha.1/haxelib/

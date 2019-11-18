@@ -43,23 +43,51 @@ typedef ParcelDefinition = {
 
 class Tool
 {
-    final temp = '.temp';
+    /**
+     * Directory relative to the current working directory that all temporary files will be stored in.
+     * This directory is removed on exit.
+     */
+    public var temp : String;
 
+    /**
+     * Path to the json file describing all assets and parcels.
+     * 
+     * e.g. `--input=/path/to/some.json`
+     */
     public var input : String;
 
+    /**
+     * Path to the directory to place all output parcels.
+     * 
+     * e.g. `--output=/path/to/some/output/directory/`
+     */
     public var output : String;
 
     public function new()
     {
-        //
+        temp   = '.temp';
+        input  = '';
+        output = '';
     }
 
     @:defaultCommand
-    public function help()
+    public function defaultCommand()
     {
-        Sys.println('TODO : implement help function');
+        help();
     }
 
+    /**
+     * Prints this help text.
+     */
+    @:command
+    public function help()
+    {
+        Sys.println(Cli.getDoc(this));
+    }
+
+    /**
+     * Creates the parcels defined in the `input` asset file and places them in the `output` directory.
+     */
     @:command
     public function pack()
     {
@@ -110,6 +138,9 @@ class Tool
         }
     }
 
+    /**
+     * Extracts all assets found in the `input` parcel and places them in the `output` directory.
+     */
     @:command
     public function peek()
     {
