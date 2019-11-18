@@ -63,11 +63,23 @@ class Tool
      */
     public var output : String;
 
+    /**
+     * Explicit path to the glsl shader compiler.
+     */
+    public var glslCompiler : String;
+
+    /**
+     * Explicit path to the hlsl shader compiler.
+     */
+    public var hlslCompiler : String;
+
     public function new()
     {
-        temp   = '.temp';
-        input  = '';
-        output = '';
+        temp         = '.temp';
+        input        = '';
+        output       = '';
+        glslCompiler = 'glslangValidator';
+        hlslCompiler = 'fxc';
     }
 
     @:defaultCommand
@@ -230,8 +242,8 @@ class Tool
      */
     function ogl4Compile(_vert : String, _frag : String) : Null<ShaderSource>
     {
-        Sys.command('glslangValidator', [ '-G', '-S', 'vert', _vert, '-o', Path.join([ temp, 'vert.out' ]) ]);
-        Sys.command('glslangValidator', [ '-G', '-S', 'frag', _frag, '-o', Path.join([ temp, 'frag.out' ]) ]);
+        Sys.command(glslCompiler, [ '-G', '-S', 'vert', _vert, '-o', Path.join([ temp, 'vert.out' ]) ]);
+        Sys.command(glslCompiler, [ '-G', '-S', 'frag', _frag, '-o', Path.join([ temp, 'frag.out' ]) ]);
 
         return new ShaderSource(
             true,
@@ -258,8 +270,8 @@ class Tool
                 File.getBytes(_frag));
         }
 
-        Sys.command('fxc', [ '/T', 'vs_5_0', '/E', 'VShader', '/Fo', Path.join([ temp, 'vert.out' ]), _vert ]);
-        Sys.command('fxc', [ '/T', 'ps_5_0', '/E', 'PShader', '/Fo', Path.join([ temp, 'frag.out' ]), _frag ]);
+        Sys.command(hlslCompiler, [ '/T', 'vs_5_0', '/E', 'VShader', '/Fo', Path.join([ temp, 'vert.out' ]), _vert ]);
+        Sys.command(hlslCompiler, [ '/T', 'ps_5_0', '/E', 'PShader', '/Fo', Path.join([ temp, 'frag.out' ]), _frag ]);
 
         return new ShaderSource(
             true,
