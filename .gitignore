@@ -1,0 +1,6 @@
+.unittest
+.vscode
+bin
+assets.json
+assets.parcel
+assets
