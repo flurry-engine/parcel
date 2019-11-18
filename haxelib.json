@@ -1,0 +1,11 @@
+
+{
+    "name"      : "parcel",
+    "license"   : "MIT",
+    "version"   : "0.0.1",
+    "classPath" : "src",
+    "contributors": [
+        "Aidan"
+    ],
+    "releasenote": "Initial release"
+}
