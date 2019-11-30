@@ -1,0 +1,20 @@
+{
+  "name": "parcel",
+  "version": "1.0.0",
+  "scripts": {
+    "postinstall": "npx lix download"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/flurry-engine/parcel.git"
+  },
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/flurry-engine/parcel/issues"
+  },
+  "homepage": "https://github.com/flurry-engine/parcel#readme",
+  "dependencies": {
+    "lix": "^15.6.0-alpha.4"
+  }
+}

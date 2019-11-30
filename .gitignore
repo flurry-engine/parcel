@@ -1,5 +1,6 @@
 .unittest
 .vscode
+node_modules
 bin
 assets.json
 assets.parcel
