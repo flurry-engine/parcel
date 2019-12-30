@@ -1,5 +1,4 @@
 .unittest
-.vscode
 node_modules
 bin
 assets.json
