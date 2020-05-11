@@ -1,45 +1,12 @@
+import hxbit.Serializer;
+import Types;
 import tink.Cli;
-import haxe.zip.Compress;
-import haxe.Serializer;
 import sys.FileSystem;
 import haxe.io.Path;
 import sys.io.File;
-import json2object.JsonParser;
 import format.png.Tools;
 import format.png.Reader;
 import uk.aidanlee.flurry.api.resources.Resource;
-import uk.aidanlee.flurry.api.resources.Parcel.ShaderInfo;
-import uk.aidanlee.flurry.api.resources.Parcel.ShaderInfoLayout;
-import uk.aidanlee.flurry.api.resources.Parcel.ParcelList;
-
-typedef AssetsInfo = {
-    /**
-     * All the assets which will be process in the post build step.
-     */
-    final assets : ParcelList;
-
-    /**
-     * All the parcels which will be created in the post build step.
-     */
-    final parcels : Array<ParcelDefinition>;
-}
-
-typedef ParcelDefinition = {
-    /**
-     * Parcel name.
-     */
-    final name : String;
-
-    /**
-     * IDs of all the assets to be included in this parcel.
-     */
-    final assets : Array<String>;
-
-    /**
-     * Name of all other parcels this parcel depends on.
-     */
-    final depends : Array<String>;
-}
 
 class Tool
 {
@@ -139,12 +106,15 @@ class Tool
 
         for (parcel in assets.parcels)
         {
-            var saver = new Serializer();
-            saver.serialize(new ParcelResource(parcel.name, [ for (id in parcel.assets) prepared[id] ], parcel.depends));
+            final serializer = new Serializer();
+            final bytes      = serializer.serialize(
+                new ParcelResource(parcel.name,
+                [ for (id in parcel.assets) prepared[id] ],
+                parcel.depends));
 
             File.saveBytes(
                 Path.join([ output, parcel.name ]),
-                Compress.run(haxe.io.Bytes.ofString(saver.toString()), 9));
+                bytes);
 
             Sys.println('created ${parcel.name}');
         }
@@ -163,39 +133,25 @@ class Tool
      * Parse the json file at the input file location.
      * @return AssetsInfo
      */
-    function parse() : AssetsInfo
+    function parse() : JsonDefinition
     {
-        var parser = new JsonParser<AssetsInfo>();
-        parser.fromJson(File.getContent(input));
-
-        for (error in parser.errors)
-        {
-            throw error;
-        }
-
-        return parser.value;
+        return tink.Json.parse(File.getContent(input));
     }
 
     /**
      * Creates a shader resource based on the provided info.
      * @param _shader Info for the shader to create.
      */
-    function createShader(_shader : ShaderInfo) : ShaderResource
+    function createShader(_shader : JsonShaderResource) : ShaderResource
     {
-        var parser = new JsonParser<ShaderInfoLayout>();
-        parser.fromJson(File.getContent(_shader.path));
+        final shaderDefinition : JsonShaderDefinition = tink.Json.parse(File.getContent(_shader.path));
 
-        for (error in parser.errors)
-        {
-            throw error;
-        }
-
-        var layout = new ShaderLayout(
-            parser.value.textures,
-            [
-                for (b in parser.value.blocks) new ShaderBlock(b.name, b.binding, [
-                    for (v in b.values) new ShaderValue(v.name, v.type)
-                ])
+        final layout = new ShaderLayout(
+            shaderDefinition.textures, [
+                for (block in shaderDefinition.blocks)
+                    new ShaderBlock(block.name, block.binding, [
+                        for (value in block.values) new ShaderValue(value.name, value.type)
+                    ])
             ]);
         var ogl3Source : Null<ShaderSource> = null;
         var ogl4Source : Null<ShaderSource> = null;

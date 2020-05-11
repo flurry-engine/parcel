@@ -2,9 +2,8 @@
 -lib RxHaxe
 -lib format
 -lib haxe-concurrent
--lib json2object
 -lib safety
--lib signals
 -lib sys.io.abstractions
--cp ${HAXE_LIBCACHE}/flurry/0.0.1/github/e0aed40f9f986cfed933b67efb9333f90cb365f0/src
+-lib hxbit
+-cp D:/projects/flurry/flurry/src
 -D flurry=0.0.1

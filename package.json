@@ -15,6 +15,6 @@
   },
   "homepage": "https://github.com/flurry-engine/parcel#readme",
   "dependencies": {
-    "lix": "^15.6.0-alpha.4"
+    "lix": "^15.9.0"
   }
 }
