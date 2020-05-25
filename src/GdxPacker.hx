@@ -103,22 +103,22 @@ class GdxPacker
             final filter = _input.readLine();
             final repeat = _input.readLine();
 
-            final name = image.replace('.png', '');
             final wh   = size.split(':')[1].split(',');
-
-            assets.push(new ImageResource(
-                name,
+            final page = new ImageResource(
+                image.replace('.png', ''),
                 Std.parseInt(wh[0]),
                 Std.parseInt(wh[1]),
-                imageBytes(Path.join([ directory, image ]))));
+                imageBytes(Path.join([ directory, image ]))); 
 
-            readSections(_input, name);
+            assets.push(page);
+
+            readSections(_input, page.id, page.width, page.height);
 
             line = _input.readLine();
         }
     }
 
-    function readSections(_input : Input, _page : String)
+    function readSections(_input : Input, _page : String, _width : Int, _height : Int)
     {
         var line = _input.readLine();
         while (line != '')
@@ -134,13 +134,16 @@ class GdxPacker
             final xy = position.split(':')[1].split(',');
             final wh = size.split(':')[1].split(',');
 
-            assets.push(new ImageFrameResource(
-                name,
-                _page,
-                Std.parseInt(xy[0]),
-                Std.parseInt(xy[1]),
-                Std.parseInt(wh[0]),
-                Std.parseInt(wh[1])));
+            final x = Std.parseInt(xy[0]);
+            final y = Std.parseInt(xy[1]);
+            final w = Std.parseInt(wh[0]);
+            final h = Std.parseInt(wh[1]);
+            final u1 = x / _width;
+            final v1 = y / _height;
+            final u2 = (x + w) / _width;
+            final v2 = (y + h) / _height;
+
+            assets.push(new ImageFrameResource(name, _page, x, y, w, h, u1, v1, u2, v2));
 
             line = _input.readLine();
         }
