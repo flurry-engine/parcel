@@ -44,6 +44,7 @@ typedef JsonAssets = {
     var bytes : Array<JsonResource>;
     var texts : Array<JsonResource>;
     var images : Array<JsonResource>;
+    var sheets : Array<JsonResource>;
     var shaders : Array<JsonShaderResource>;
 }
 

@@ -1,3 +1,4 @@
+import uk.aidanlee.flurry.api.resources.Resource.ImageResource;
 import format.png.Reader;
 import format.png.Tools;
 import haxe.io.Bytes;
@@ -12,7 +13,7 @@ using StringTools;
 
 class GdxPacker
 {
-    final packJson = '{
+    static final packJson = '{
         "pot": true,
         "paddingX": 0,
         "paddingY": 0,
@@ -55,13 +56,10 @@ class GdxPacker
 
     final name : String;
 
-    final assets : Array<Resource>;
-
     public function new(_directory : String, _name : String)
     {
         directory = _directory;
         name      = _name;
-        assets    = [];
     }
 
     public function pack()
@@ -73,80 +71,32 @@ class GdxPacker
         Sys.command('java', [ '-jar', 'C:/Users/AidanLee/Documents/atlas-test/runnable-texturepacker.jar', directory, directory, name, packFile ]);
     }
 
-    public function generate()
+    public function resources() : Array<Resource>
     {
-        final input  = File.read(Path.join([ directory, 'preload.atlas' ]));
+        final pages  = GdxParser.parse(Path.join([ directory, '$name.atlas' ]));
+        final assets = new Array<Resource>();
 
-        try
+        for (page in pages)
         {
-            input.readLine();
+            assets.push(new ImageResource(page.image.file, page.width, page.height, imageBytes(Path.join([ directory, page.image.toString() ]))));
 
-            readPages(input);
+            for (section in page.sections)
+            {
+                assets.push(new ImageFrameResource(
+                    section.name,
+                    page.image.file,
+                    section.x,
+                    section.y,
+                    section.width,
+                    section.height,
+                    section.x / page.width,
+                    section.y / page.height,
+                    (section.x + section.width) / page.width,
+                    (section.y + section.height) / page.height));
+            }
         }
-        catch (_ex : Eof)
-        {
-            input.close();
-        }
-    }
 
-    public function resources() return assets;
-
-    function readPages(_input : Input)
-    {
-        var line = _input.readLine();
-        while (line != '')
-        {
-            // Read header
-            final image  = line;
-            final size   = _input.readLine();
-            final format = _input.readLine();
-            final filter = _input.readLine();
-            final repeat = _input.readLine();
-
-            final wh   = size.split(':')[1].split(',');
-            final page = new ImageResource(
-                image.replace('.png', ''),
-                Std.parseInt(wh[0]),
-                Std.parseInt(wh[1]),
-                imageBytes(Path.join([ directory, image ]))); 
-
-            assets.push(page);
-
-            readSections(_input, page.id, page.width, page.height);
-
-            line = _input.readLine();
-        }
-    }
-
-    function readSections(_input : Input, _page : String, _width : Int, _height : Int)
-    {
-        var line = _input.readLine();
-        while (line != '')
-        {
-            final name     = line;
-            final rotated  = _input.readLine();
-            final position = _input.readLine();
-            final size     = _input.readLine();
-            final original = _input.readLine();
-            final offset   = _input.readLine();
-            final index    = _input.readLine();
-
-            final xy = position.split(':')[1].split(',');
-            final wh = size.split(':')[1].split(',');
-
-            final x = Std.parseInt(xy[0]);
-            final y = Std.parseInt(xy[1]);
-            final w = Std.parseInt(wh[0]);
-            final h = Std.parseInt(wh[1]);
-            final u1 = x / _width;
-            final v1 = y / _height;
-            final u2 = (x + w) / _width;
-            final v2 = (y + h) / _height;
-
-            assets.push(new ImageFrameResource(name, _page, x, y, w, h, u1, v1, u2, v2));
-
-            line = _input.readLine();
-        }
+        return assets;
     }
 
     function imageBytes(_path : String) : Bytes

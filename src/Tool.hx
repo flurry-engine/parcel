@@ -8,6 +8,8 @@ import sys.io.File;
 import tink.Cli;
 import uk.aidanlee.flurry.api.resources.Resource;
 
+using Lambda;
+
 class Tool
 {
     /**
@@ -91,11 +93,11 @@ class Tool
         }
 
         clean(temp);
-
+ 
         for (parcel in assets.parcels)
         {
             // Generate the image atlases and gather all other resources to be included in the parcel.
-            final finalAssets = generateAtlas(parcel.name, parcel.assets, assets.assets.images);
+            final finalAssets = generateAtlas(parcel.name, parcel.assets, assets.assets.images, assets.assets.sheets);
             for (id in parcel.assets)
             {
                 if (prepared.exists(id))
@@ -110,7 +112,11 @@ class Tool
             final bytes       = serializer.serialize(parcel);
 
             File.saveBytes(Path.join([ output, parcel.name ]), Compress.run(bytes, 9));
+
+            clean(temp);
         }
+
+        FileSystem.deleteDirectory(temp);
     }
 
     /**
@@ -228,10 +234,11 @@ class Tool
             File.getBytes(Path.join([ temp, 'frag.out' ])));
     }
 
-    function generateAtlas(_name : String, _assets : Array<String>, _images : Array<JsonResource>)
+    function generateAtlas(_name : String, _assets : Array<String>, _images : Array<JsonResource>, _sheets : Array<JsonResource>)
     {
         // Find all image assets in this parcel
         final parcelImages = [];
+        final parcelSheets = [];
 
         for (asset in _assets)
         {
@@ -242,14 +249,19 @@ class Tool
                     parcelImages.push(image);
                 }
             }
+            for (sheet in _sheets)
+            {
+                if (asset == sheet.id)
+                {
+                    parcelSheets.push(sheet);
+                }
+            }
         }
 
-        if (parcelImages.length == 0)
+        if (parcelImages.length == 0 && parcelSheets.length == 0)
         {
             return [];
         }
-
-        FileSystem.createDirectory(temp);
 
         // Copy all the images to a temp location
         for (image in parcelImages)
@@ -260,9 +272,6 @@ class Tool
         // Generate the atlas
         final packer = new GdxPacker(temp, _name);
         packer.pack();
-        packer.generate();
-
-        clean(temp);
 
         return packer.resources();
     }
@@ -286,7 +295,5 @@ class Tool
                 FileSystem.deleteFile(path);
             }
         }
-
-        FileSystem.deleteDirectory(_dir);
     }
 }
