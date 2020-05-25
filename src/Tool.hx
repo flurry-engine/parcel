@@ -1,3 +1,4 @@
+import haxe.zip.Compress;
 import GdxPacker;
 import Types;
 import haxe.io.Path;
@@ -108,7 +109,7 @@ class Tool
             final parcel      = new ParcelResource(parcel.name, finalAssets, parcel.depends);
             final bytes       = serializer.serialize(parcel);
 
-            File.saveBytes(Path.join([ output, parcel.name ]), bytes);
+            File.saveBytes(Path.join([ output, parcel.name ]), Compress.run(bytes, 9));
         }
     }
 
