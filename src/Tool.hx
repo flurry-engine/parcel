@@ -1,21 +1,14 @@
-import hxbit.Serializer;
+import GdxPacker;
 import Types;
-import tink.Cli;
-import sys.FileSystem;
 import haxe.io.Path;
+import hxbit.Serializer;
+import sys.FileSystem;
 import sys.io.File;
-import format.png.Tools;
-import format.png.Reader;
+import tink.Cli;
 import uk.aidanlee.flurry.api.resources.Resource;
 
 class Tool
 {
-    /**
-     * Directory relative to the current working directory that all temporary files will be stored in.
-     * This directory is removed on exit.
-     */
-    public var temp : String;
-
     /**
      * Path to the json file describing all assets and parcels.
      * 
@@ -40,13 +33,19 @@ class Tool
      */
     public var hlslCompiler : String;
 
+    /**
+     * Directory relative to the current working directory that all temporary files will be stored in.
+     * This directory is removed on exit.
+     */
+     final temp : String;
+
     public function new()
     {
-        temp         = '.temp';
         input        = '';
         output       = '';
         glslCompiler = 'glslangValidator';
         hlslCompiler = 'fxc';
+        temp         = '.temp';
     }
 
     @:defaultCommand
@@ -80,18 +79,6 @@ class Tool
             prepared[shader.id] = createShader(shader);
         }
 
-        for (image in assets.assets.images)
-        {
-            var input = File.read(image.path);
-
-            var info = new Reader(input).read();
-            var head = Tools.getHeader(info);
-
-            prepared[image.id] = new ImageResource(image.id, head.width, head.height, Tools.extract32(info));
-
-            input.close();
-        }
-
         for (text in assets.assets.texts)
         {
             prepared[text.id] = new TextResource(text.id, File.getContent(text.path));
@@ -106,17 +93,22 @@ class Tool
 
         for (parcel in assets.parcels)
         {
-            final serializer = new Serializer();
-            final bytes      = serializer.serialize(
-                new ParcelResource(parcel.name,
-                [ for (id in parcel.assets) prepared[id] ],
-                parcel.depends));
+            // Generate the image atlases and gather all other resources to be included in the parcel.
+            final finalAssets = generateAtlas(parcel.name, parcel.assets, assets.assets.images);
+            for (id in parcel.assets)
+            {
+                if (prepared.exists(id))
+                {
+                    finalAssets.push(prepared[id]);
+                }
+            }
 
-            File.saveBytes(
-                Path.join([ output, parcel.name ]),
-                bytes);
+            // Serialise and compress the parcel.
+            final serializer  = new Serializer();
+            final parcel      = new ParcelResource(parcel.name, finalAssets, parcel.depends);
+            final bytes       = serializer.serialize(parcel);
 
-            Sys.println('created ${parcel.name}');
+            File.saveBytes(Path.join([ output, parcel.name ]), bytes);
         }
     }
 
@@ -235,6 +227,45 @@ class Tool
             File.getBytes(Path.join([ temp, 'frag.out' ])));
     }
 
+    function generateAtlas(_name : String, _assets : Array<String>, _images : Array<JsonResource>)
+    {
+        // Find all image assets in this parcel
+        final parcelImages = [];
+
+        for (asset in _assets)
+        {
+            for (image in _images)
+            {
+                if (asset == image.id)
+                {
+                    parcelImages.push(image);
+                }
+            }
+        }
+
+        if (parcelImages.length == 0)
+        {
+            return [];
+        }
+
+        FileSystem.createDirectory(Path.join([ temp, _name ]));
+
+        // Copy all the images to a temp location
+        for (image in parcelImages)
+        {
+            File.copy(image.path, Path.withExtension(Path.join([ temp, _name, image.id ]), 'png'));
+        }
+
+        // Generate the atlas
+        final packer = new GdxPacker(temp, _name);
+        packer.pack();
+        packer.generate();
+
+        // clean(Path.join([ temp, _name ]));
+
+        return packer.resources();
+    }
+
     /**
      * Remove an entire directory.
      * @param _dir Directory to remove.
@@ -255,6 +286,6 @@ class Tool
             }
         }
 
-        FileSystem.deleteDirectory(temp);
+        FileSystem.deleteDirectory(_dir);
     }
 }
