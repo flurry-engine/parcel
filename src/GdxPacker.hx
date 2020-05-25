@@ -59,7 +59,7 @@ class GdxPacker
 
     public function new(_directory : String, _name : String)
     {
-        directory = Path.join([ _directory, _name ]);
+        directory = _directory;
         name      = _name;
         assets    = [];
     }

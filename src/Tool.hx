@@ -249,12 +249,12 @@ class Tool
             return [];
         }
 
-        FileSystem.createDirectory(Path.join([ temp, _name ]));
+        FileSystem.createDirectory(temp);
 
         // Copy all the images to a temp location
         for (image in parcelImages)
         {
-            File.copy(image.path, Path.withExtension(Path.join([ temp, _name, image.id ]), 'png'));
+            File.copy(image.path, Path.withExtension(Path.join([ temp, image.id ]), 'png'));
         }
 
         // Generate the atlas
@@ -262,7 +262,7 @@ class Tool
         packer.pack();
         packer.generate();
 
-        // clean(Path.join([ temp, _name ]));
+        clean(temp);
 
         return packer.resources();
     }
