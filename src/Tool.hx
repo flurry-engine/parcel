@@ -8,8 +8,6 @@ import sys.io.File;
 import tink.Cli;
 import uk.aidanlee.flurry.api.resources.Resource;
 
-using Lambda;
-
 class Tool
 {
     /**
@@ -77,6 +75,8 @@ class Tool
 
         FileSystem.createDirectory(temp);
 
+        // These assets are not packed on a per parcel basis, so can be pre-created and stored.
+
         for (shader in assets.assets.shaders)
         {
             prepared[shader.id] = createShader(shader);
@@ -96,7 +96,8 @@ class Tool
  
         for (parcel in assets.parcels)
         {
-            // Generate the image atlases and gather all other resources to be included in the parcel.
+            // Images and pre-compiled sheets are packed on a per-parcel basis
+            // Once the pages have been created we append assets in the parcel which have been pre-created from above.
             final finalAssets = generateAtlas(parcel.name, parcel.assets, assets.assets.images, assets.assets.sheets);
             for (id in parcel.assets)
             {
@@ -113,10 +114,10 @@ class Tool
 
             File.saveBytes(Path.join([ output, parcel.name ]), Compress.run(bytes, 9));
 
-            // clean(temp);
+            clean(temp);
         }
 
-        // FileSystem.deleteDirectory(temp);
+        FileSystem.deleteDirectory(temp);
     }
 
     /**
@@ -234,9 +235,18 @@ class Tool
             File.getBytes(Path.join([ temp, 'frag.out' ])));
     }
 
-    function generateAtlas(_name : String, _assets : Array<String>, _images : Array<JsonResource>, _sheets : Array<JsonResource>)
+    /**
+     * Finds all images and pre-calculated sprite sheets and packs them all together.
+     * @param _name Name of the parcel.
+     * @param _assets All the resources (including non image and sheet) to be included in the parcel.
+     * @param _images All image resources tracked in this project.
+     * @param _sheets All sheet resources tracked in this project.
+     */
+    function generateAtlas(_name : String, _assets : Array<String>, _images : Array<JsonResource>, _sheets : Array<JsonResource>) : Array<Resource>
     {
-        // Find all image assets in this parcel
+        // Iterate over all assets to be included in this parcel and try and find a matching image or sheet ID.
+        // There's almost certainly a better way to deal with this, with many assets and parcels this looping could be quite slow.
+
         final parcelImages = [];
         final parcelSheets = [];
 
@@ -264,11 +274,11 @@ class Tool
         }
 
         // Copy all the images to a temp location
+
         for (image in parcelImages)
         {
             File.copy(image.path, Path.withExtension(Path.join([ temp, image.id ]), 'png'));
         }
-
         for (sheets in parcelSheets)
         {
             for (page in sheets.pages)
@@ -277,10 +287,11 @@ class Tool
             }
         }
 
-        // Generate the atlas
+        // Pack all the images which have been copied over to the temp directory.
         final packer = new GdxPacker(temp, _name);
         packer.pack();
 
+        // Create resources from the packed images.
         return packer.resources(parcelSheets);
     }
 

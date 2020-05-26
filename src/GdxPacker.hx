@@ -1,15 +1,11 @@
 import GdxParser.GdxSection;
-import haxe.ds.ReadOnlyArray;
 import GdxParser.GdxPage;
-import uk.aidanlee.flurry.api.resources.Resource.ImageResource;
 import format.png.Reader;
 import format.png.Tools;
-import haxe.io.Bytes;
-import haxe.io.Eof;
-import haxe.io.Input;
 import haxe.io.Path;
+import haxe.io.Bytes;
+import haxe.ds.ReadOnlyArray;
 import sys.io.File;
-import sys.io.FileInput;
 import uk.aidanlee.flurry.api.resources.Resource;
 
 using StringTools;
@@ -27,8 +23,8 @@ class GdxPacker
         "rotation": false,
         "minWidth": 16,
         "minHeight": 16,
-        "maxWidth": 512,
-        "maxHeight": 512,
+        "maxWidth": 2048,
+        "maxHeight": 2048,
         "square": false,
         "stripWhitespaceX": false,
         "stripWhitespaceY": false,
@@ -59,12 +55,21 @@ class GdxPacker
 
     final name : String;
 
+    /**
+     * Create a new instance which can pack a directory of images.
+     * @param _directory Directory to pack.
+     * @param _name Name of the generated atlas.
+     */
     public function new(_directory : String, _name : String)
     {
         directory = _directory;
         name      = _name;
     }
 
+    /**
+     * Generate an atlas file and png (s) from the temp directory.
+     * Output atlas and png (s) are also placed in the temp directory.
+     */
     public function pack()
     {
         final packFile = Path.join([ directory, 'pack.json' ]);
@@ -74,6 +79,13 @@ class GdxPacker
         Sys.command('java', [ '-jar', 'C:/Users/AidanLee/Documents/atlas-test/runnable-texturepacker.jar', directory, directory, name, packFile ]);
     }
 
+    /**
+     * Create `ImageResource` and `ImageFrameResource`'s from the generated atlas.
+     * We iterate over all the sections in each generated page to try and find all sheets which were added.
+     * This is needed to generate the correct UV coorinates.
+     * @param _sheets Array of all sheets and the path to them.
+     * @return Array<Resource>
+     */
     public function resources(_sheets : Array<{ path : Path, pages : ReadOnlyArray<GdxPage> }>) : Array<Resource>
     {
         final pages  = GdxParser.parse(Path.join([ directory, '$name.atlas' ]));
@@ -124,6 +136,11 @@ class GdxPacker
         return assets;
     }
 
+    /**
+     * Get the BGRA bytes data of a png.
+     * @param _path Path to the image.
+     * @return Bytes
+     */
     function imageBytes(_path : String) : Bytes
     {
         final input = File.read(_path);
@@ -135,6 +152,12 @@ class GdxPacker
         return bytes;
     }
 
+    /**
+     * Searches the sheet pages for one which has a matching name with the provided section.
+     * @param _section Section to find the matching source page.
+     * @param _sheets Source asset sheets to search.
+     * @return Result<GdxPage>
+     */
     function findPage(_section : GdxSection, _sheets : Array<{ path : Path, pages : ReadOnlyArray<GdxPage> }>) : Result<GdxPage>
     {
         for (sheet in _sheets)
@@ -151,12 +174,3 @@ class GdxPacker
         return Error;
     }
 }
-
-private class Page
-{
-    public function new()
-    {
-        //
-    }
-}
-
