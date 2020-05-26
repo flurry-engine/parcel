@@ -40,7 +40,7 @@ class Tool
      * Directory relative to the current working directory that all temporary files will be stored in.
      * This directory is removed on exit.
      */
-     final temp : String;
+    public var temp : String;
 
     public function new()
     {
@@ -113,10 +113,10 @@ class Tool
 
             File.saveBytes(Path.join([ output, parcel.name ]), Compress.run(bytes, 9));
 
-            clean(temp);
+            // clean(temp);
         }
 
-        FileSystem.deleteDirectory(temp);
+        // FileSystem.deleteDirectory(temp);
     }
 
     /**
@@ -253,7 +253,7 @@ class Tool
             {
                 if (asset == sheet.id)
                 {
-                    parcelSheets.push(sheet);
+                    parcelSheets.push({ path : new Path(sheet.path), pages : GdxParser.parse(sheet.path) });
                 }
             }
         }
@@ -269,11 +269,19 @@ class Tool
             File.copy(image.path, Path.withExtension(Path.join([ temp, image.id ]), 'png'));
         }
 
+        for (sheets in parcelSheets)
+        {
+            for (page in sheets.pages)
+            {
+                File.copy(Path.join([ sheets.path.dir, page.image.toString() ]), Path.join([ temp, page.image.toString() ]));
+            }
+        }
+
         // Generate the atlas
         final packer = new GdxPacker(temp, _name);
         packer.pack();
 
-        return packer.resources();
+        return packer.resources(parcelSheets);
     }
 
     /**

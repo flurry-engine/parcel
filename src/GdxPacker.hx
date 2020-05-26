@@ -1,3 +1,6 @@
+import GdxParser.GdxSection;
+import haxe.ds.ReadOnlyArray;
+import GdxParser.GdxPage;
 import uk.aidanlee.flurry.api.resources.Resource.ImageResource;
 import format.png.Reader;
 import format.png.Tools;
@@ -24,7 +27,7 @@ class GdxPacker
         "rotation": false,
         "minWidth": 16,
         "minHeight": 16,
-        "maxWidth": 256,
+        "maxWidth": 512,
         "maxHeight": 512,
         "square": false,
         "stripWhitespaceX": false,
@@ -71,7 +74,7 @@ class GdxPacker
         Sys.command('java', [ '-jar', 'C:/Users/AidanLee/Documents/atlas-test/runnable-texturepacker.jar', directory, directory, name, packFile ]);
     }
 
-    public function resources() : Array<Resource>
+    public function resources(_sheets : Array<{ path : Path, pages : ReadOnlyArray<GdxPage> }>) : Array<Resource>
     {
         final pages  = GdxParser.parse(Path.join([ directory, '$name.atlas' ]));
         final assets = new Array<Resource>();
@@ -82,17 +85,39 @@ class GdxPacker
 
             for (section in page.sections)
             {
-                assets.push(new ImageFrameResource(
-                    section.name,
-                    page.image.file,
-                    section.x,
-                    section.y,
-                    section.width,
-                    section.height,
-                    section.x / page.width,
-                    section.y / page.height,
-                    (section.x + section.width) / page.width,
-                    (section.y + section.height) / page.height));
+                switch findPage(section, _sheets)
+                {
+                    case Ok(_page):
+                        for (subSection in _page.sections)
+                        {
+                            final x = section.x + subSection.x;
+                            final y = section.y + subSection.y;
+
+                            assets.push(new ImageFrameResource(
+                                subSection.name,
+                                page.image.file,
+                                x,
+                                y,
+                                subSection.width,
+                                subSection.height,
+                                x / page.width,
+                                y / page.height,
+                                (x + subSection.width) / page.width,
+                                (y + subSection.height) / page.height));
+                        }
+                    case Error:
+                        assets.push(new ImageFrameResource(
+                            section.name,
+                            page.image.file,
+                            section.x,
+                            section.y,
+                            section.width,
+                            section.height,
+                            section.x / page.width,
+                            section.y / page.height,
+                            (section.x + section.width) / page.width,
+                            (section.y + section.height) / page.height));
+                }
             }
         }
 
@@ -108,6 +133,22 @@ class GdxPacker
         input.close();
 
         return bytes;
+    }
+
+    function findPage(_section : GdxSection, _sheets : Array<{ path : Path, pages : ReadOnlyArray<GdxPage> }>) : Result<GdxPage>
+    {
+        for (sheet in _sheets)
+        {
+            for (page in sheet.pages)
+            {
+                if (page.image.file == _section.name)
+                {
+                    return Ok(page);
+                }
+            }
+        }
+
+        return Error;
     }
 }
 
