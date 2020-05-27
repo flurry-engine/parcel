@@ -38,11 +38,9 @@ class Tool
      */
     public var hlslCompiler : String;
 
-    /**
-     * Directory relative to the current working directory that all temporary files will be stored in.
-     * This directory is removed on exit.
-     */
-    public var temp : String;
+    final tempAssets : String;
+
+    final tempFonts : String;
 
     public function new()
     {
@@ -50,7 +48,10 @@ class Tool
         output       = '';
         glslCompiler = 'glslangValidator';
         hlslCompiler = 'fxc';
-        temp         = '.temp';
+
+        final baseTemp = Path.join([ 'bin', 'temp' ]);
+        tempAssets = Path.join([ baseTemp, 'assets' ]);
+        tempFonts  = Path.join([ baseTemp, 'fonts' ]);
     }
 
     @:defaultCommand
@@ -77,7 +78,8 @@ class Tool
         final assets   = parse();
         final prepared = new Map<String, Resource>();
 
-        FileSystem.createDirectory(temp);
+        FileSystem.createDirectory(tempAssets);
+        FileSystem.createDirectory(tempFonts);
 
         // These assets are not packed on a per parcel basis, so can be pre-created and stored.
 
@@ -96,7 +98,19 @@ class Tool
             prepared[bytes.id] = new BytesResource(bytes.id, File.getBytes(bytes.path));
         }
 
-        clean(temp);
+        for (font in assets.assets.fonts)
+        {
+            Sys.command('npx', [
+                'msdf-bmfont',
+                font.path,
+                '-f', 'json',
+                '-o', Path.join([ tempFonts, '${ new Path(font.path).file }.json' ]),
+                '-p', '2',
+                '--smart-size',
+                '--pot' ]);
+        }
+
+        clean(tempAssets);
  
         for (parcel in assets.parcels)
         {
@@ -118,10 +132,13 @@ class Tool
 
             File.saveBytes(Path.join([ output, parcel.name ]), Compress.run(bytes, 9));
 
-            clean(temp);
+            // clean(tempAssets);
         }
 
-        FileSystem.deleteDirectory(temp);
+        // clean(tempFonts);
+
+        // FileSystem.deleteDirectory(tempAssets);
+        // FileSystem.deleteDirectory(tempFonts);
     }
 
     /**
@@ -202,13 +219,13 @@ class Tool
      */
     function ogl4Compile(_vert : String, _frag : String) : Null<ShaderSource>
     {
-        Sys.command(glslCompiler, [ '-G', '-S', 'vert', _vert, '-o', Path.join([ temp, 'vert.out' ]) ]);
-        Sys.command(glslCompiler, [ '-G', '-S', 'frag', _frag, '-o', Path.join([ temp, 'frag.out' ]) ]);
+        Sys.command(glslCompiler, [ '-G', '-S', 'vert', _vert, '-o', Path.join([ tempAssets, 'vert.out' ]) ]);
+        Sys.command(glslCompiler, [ '-G', '-S', 'frag', _frag, '-o', Path.join([ tempAssets, 'frag.out' ]) ]);
 
         return new ShaderSource(
             true,
-            File.getBytes(Path.join([ temp, 'vert.out' ])),
-            File.getBytes(Path.join([ temp, 'frag.out' ])));
+            File.getBytes(Path.join([ tempAssets, 'vert.out' ])),
+            File.getBytes(Path.join([ tempAssets, 'frag.out' ])));
     }
 
     /**
@@ -230,13 +247,13 @@ class Tool
                 File.getBytes(_frag));
         }
 
-        Sys.command(hlslCompiler, [ '/T', 'vs_5_0', '/E', 'VShader', '/Fo', Path.join([ temp, 'vert.out' ]), _vert ]);
-        Sys.command(hlslCompiler, [ '/T', 'ps_5_0', '/E', 'PShader', '/Fo', Path.join([ temp, 'frag.out' ]), _frag ]);
+        Sys.command(hlslCompiler, [ '/T', 'vs_5_0', '/E', 'VShader', '/Fo', Path.join([ tempAssets, 'vert.out' ]), _vert ]);
+        Sys.command(hlslCompiler, [ '/T', 'ps_5_0', '/E', 'PShader', '/Fo', Path.join([ tempAssets, 'frag.out' ]), _frag ]);
 
         return new ShaderSource(
             true,
-            File.getBytes(Path.join([ temp, 'vert.out' ])),
-            File.getBytes(Path.join([ temp, 'frag.out' ])));
+            File.getBytes(Path.join([ tempAssets, 'vert.out' ])),
+            File.getBytes(Path.join([ tempAssets, 'frag.out' ])));
     }
 
     /**
@@ -280,7 +297,10 @@ class Tool
             {
                 if (asset == font.id)
                 {
-                    // parcelFonts.push({ path : new Path(font.path), font : tink.Json.parse(font.path) });
+                    final path = new Path(font.path);
+                    final json = Path.join([ tempFonts, '${ path.file }.json' ]);
+
+                    parcelFonts.push({ path : path, font : tink.Json.parse(File.getContent(json)) });
                 }
             }
         }
@@ -294,29 +314,29 @@ class Tool
 
         for (image in parcelImages)
         {
-            File.copy(image.path, Path.withExtension(Path.join([ temp, image.id ]), 'png'));
+            File.copy(image.path, Path.withExtension(Path.join([ tempAssets, image.id ]), 'png'));
         }
         for (sheets in parcelSheets)
         {
             for (page in sheets.pages)
             {
-                File.copy(Path.join([ sheets.path.dir, page.image.toString() ]), Path.join([ temp, page.image.toString() ]));
+                File.copy(Path.join([ sheets.path.dir, page.image.toString() ]), Path.join([ tempAssets, page.image.toString() ]));
             }
         }
         for (font in parcelFonts)
         {
             for (page in font.font.pages)
             {
-                // trace('font ${ font.font.info.face } page $page');
+                File.copy(Path.join([ tempFonts, page ]), Path.join([ tempAssets, page ]));
             }
         }
 
         // Pack all the images which have been copied over to the temp directory.
-        final packer = new GdxPacker(temp, _name);
+        final packer = new GdxPacker(tempAssets, _name);
         packer.pack();
 
         // Create resources from the packed images.
-        return packer.resources(parcelSheets);
+        return packer.resources(parcelSheets, parcelFonts);
     }
 
     /**

@@ -64,6 +64,7 @@ typedef JsonFontChar = {
     var xoffset : Int;
     var yoffset : Int;
     var xadvance : Int;
+    var chnl : Int;
     var x : Int;
     var y : Int;
     var page : Int;
@@ -108,10 +109,10 @@ typedef JsonFontDistanceField = {
 }
 
 typedef JsonFontDefinition = {
+    var pages : Array<String>;
+    var chars : Array<JsonFontChar>;
     var info : JsonFontInfo;
     var common : JsonFontCommon;
     var distanceField : JsonFontDistanceField;
-    var pages : Array<String>;
-    var chars : Array<JsonFontChar>;
-    var kerning : Array<JsonFontKerning>;
+    var kernings : Array<JsonFontKerning>;
 }
