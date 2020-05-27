@@ -1,11 +1,13 @@
-
 {
-    "name"      : "parcel",
-    "license"   : "MIT",
-    "version"   : "0.0.1",
-    "classPath" : "src",
-    "contributors": [
-        "Aidan"
-    ],
-    "releasenote": "Initial release"
+    "name"         : "parcel",
+    "license"      : "MIT",
+    "version"      : "0.0.1",
+    "contributors" : [ "Aidan" ],
+    "main"         : "src/Main",
+    "releasenote"  : "Initial release",
+    "dependencies" : {
+        "tink_cli"  : "",
+        "tink_json" : "",
+        "flurry"    : ""
+    }
 }

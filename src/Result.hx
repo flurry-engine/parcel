@@ -1,3 +1,4 @@
+package src;
 
 enum Result<T>
 {

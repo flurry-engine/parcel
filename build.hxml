@@ -1,9 +1,3 @@
--cp src
-
 -lib flurry
 -lib tink_cli
 -lib tink_json
-
--main Main
-
--neko run.n

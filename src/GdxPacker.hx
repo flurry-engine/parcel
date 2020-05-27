@@ -1,5 +1,7 @@
-import GdxParser.GdxSection;
-import GdxParser.GdxPage;
+package src;
+
+import src.GdxParser.GdxSection;
+import src.GdxParser.GdxPage;
 import format.png.Reader;
 import format.png.Tools;
 import haxe.io.Path;

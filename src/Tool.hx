@@ -1,10 +1,14 @@
-import haxe.zip.Compress;
-import GdxPacker;
-import Types;
+package src;
+
+import src.GdxParser;
+import src.GdxPacker;
+import src.Types;
+import haxe.ds.ReadOnlyArray;
 import haxe.io.Path;
-import hxbit.Serializer;
+import haxe.zip.Compress;
 import sys.FileSystem;
 import sys.io.File;
+import hxbit.Serializer;
 import tink.Cli;
 import uk.aidanlee.flurry.api.resources.Resource;
 
@@ -98,7 +102,7 @@ class Tool
         {
             // Images and pre-compiled sheets are packed on a per-parcel basis
             // Once the pages have been created we append assets in the parcel which have been pre-created from above.
-            final finalAssets = generateAtlas(parcel.name, parcel.assets, assets.assets.images, assets.assets.sheets);
+            final finalAssets = generateAtlas(parcel.name, parcel.assets, assets.assets.images, assets.assets.sheets, assets.assets.fonts);
             for (id in parcel.assets)
             {
                 if (prepared.exists(id))
@@ -242,13 +246,19 @@ class Tool
      * @param _images All image resources tracked in this project.
      * @param _sheets All sheet resources tracked in this project.
      */
-    function generateAtlas(_name : String, _assets : Array<String>, _images : Array<JsonResource>, _sheets : Array<JsonResource>) : Array<Resource>
+    function generateAtlas(
+        _name : String,
+        _assets : Array<String>,
+        _images : Array<JsonResource>,
+        _sheets : Array<JsonResource>,
+        _fonts : Array<JsonResource>) : Array<Resource>
     {
         // Iterate over all assets to be included in this parcel and try and find a matching image or sheet ID.
         // There's almost certainly a better way to deal with this, with many assets and parcels this looping could be quite slow.
 
         final parcelImages = [];
-        final parcelSheets = [];
+        final parcelSheets = new Array<{ path : Path, pages : ReadOnlyArray<GdxPage> }>();
+        final parcelFonts  = new Array<{ path : Path, font : JsonFontDefinition }>();
 
         for (asset in _assets)
         {
@@ -266,9 +276,16 @@ class Tool
                     parcelSheets.push({ path : new Path(sheet.path), pages : GdxParser.parse(sheet.path) });
                 }
             }
+            for (font in _fonts)
+            {
+                if (asset == font.id)
+                {
+                    // parcelFonts.push({ path : new Path(font.path), font : tink.Json.parse(font.path) });
+                }
+            }
         }
 
-        if (parcelImages.length == 0 && parcelSheets.length == 0)
+        if (parcelImages.length == 0 && parcelSheets.length == 0 && parcelFonts.length == 0)
         {
             return [];
         }
@@ -284,6 +301,13 @@ class Tool
             for (page in sheets.pages)
             {
                 File.copy(Path.join([ sheets.path.dir, page.image.toString() ]), Path.join([ temp, page.image.toString() ]));
+            }
+        }
+        for (font in parcelFonts)
+        {
+            for (page in font.font.pages)
+            {
+                // trace('font ${ font.font.info.face } page $page');
             }
         }
 
