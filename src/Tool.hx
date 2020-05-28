@@ -395,7 +395,7 @@ class Tool
         File.saveContent(packFile, packJson);
 
         Sys.command('java', [
-            '-jar', 'C:/Users/AidanLee/Documents/atlas-test/runnable-texturepacker.jar',
+            '-jar', Sys.getEnv('GDX_PACKER_JAR'),
             tempAssets,   // input
             tempAssets,   // output
             _parcel.name, // atlas name
