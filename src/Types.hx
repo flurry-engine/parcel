@@ -37,8 +37,13 @@ typedef JsonShaderResource = JsonResource & {
 
 typedef JsonParcel = {
     var name : String;
-    var assets : Array<String>;
     var depends : Array<String>;
+    var ?bytes : Array<String>;
+    var ?texts : Array<String>;
+    var ?fonts : Array<String>;
+    var ?images : Array<String>;
+    var ?sheets : Array<String>;
+    var ?shaders : Array<String>;
 }
 
 typedef JsonAssets = {

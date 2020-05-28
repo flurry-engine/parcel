@@ -8,6 +8,7 @@
     "dependencies" : {
         "tink_cli"  : "",
         "tink_json" : "",
-        "flurry"    : ""
+        "flurry"    : "",
+        "safety"    : ""
     }
 }

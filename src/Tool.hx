@@ -1,7 +1,9 @@
 package src;
 
+import format.png.Tools;
+import format.png.Reader;
+import haxe.io.Bytes;
 import src.GdxParser;
-import src.GdxPacker;
 import src.Types;
 import haxe.ds.ReadOnlyArray;
 import haxe.io.Path;
@@ -11,6 +13,9 @@ import sys.io.File;
 import hxbit.Serializer;
 import tink.Cli;
 import uk.aidanlee.flurry.api.resources.Resource;
+
+using Lambda;
+using Safety;
 
 class Tool
 {
@@ -75,7 +80,7 @@ class Tool
     @:command
     public function pack()
     {
-        final assets   = parse();
+        final project  = parse();
         final prepared = new Map<String, Resource>();
 
         FileSystem.createDirectory(tempAssets);
@@ -83,28 +88,28 @@ class Tool
 
         // These assets are not packed on a per parcel basis, so can be pre-created and stored.
 
-        for (shader in assets.assets.shaders)
+        for (shader in project.assets.shaders)
         {
             prepared[shader.id] = createShader(shader);
         }
 
-        for (text in assets.assets.texts)
+        for (text in project.assets.texts)
         {
             prepared[text.id] = new TextResource(text.id, File.getContent(text.path));
         }
 
-        for (bytes in assets.assets.bytes)
+        for (bytes in project.assets.bytes)
         {
             prepared[bytes.id] = new BytesResource(bytes.id, File.getBytes(bytes.path));
         }
 
-        for (font in assets.assets.fonts)
+        for (font in project.assets.fonts)
         {
             Sys.command('npx', [
                 'msdf-bmfont',
                 font.path,
                 '-f', 'json',
-                '-o', Path.join([ tempFonts, '${ new Path(font.path).file }.json' ]),
+                '-o', Path.join([ tempFonts, font.id ]),
                 '-p', '2',
                 '--smart-size',
                 '--pot' ]);
@@ -112,22 +117,39 @@ class Tool
 
         clean(tempAssets);
  
-        for (parcel in assets.parcels)
+        for (parcel in project.parcels)
         {
-            // Images and pre-compiled sheets are packed on a per-parcel basis
-            // Once the pages have been created we append assets in the parcel which have been pre-created from above.
-            final finalAssets = generateAtlas(parcel.name, parcel.assets, assets.assets.images, assets.assets.sheets, assets.assets.fonts);
-            for (id in parcel.assets)
+            final assets =
+                if (parcel.images == null && parcel.sheets == null && parcel.fonts == null)
+                    [];
+                else
+                    packImages(parcel, project.assets.images, project.assets.sheets, project.assets.fonts);
+
+            for (id in parcel.texts.or([]))
             {
                 if (prepared.exists(id))
                 {
-                    finalAssets.push(prepared[id]);
+                    assets.push(prepared[id]);
+                }
+            }
+            for (id in parcel.bytes.or([]))
+            {
+                if (prepared.exists(id))
+                {
+                    assets.push(prepared[id]);
+                }
+            }
+            for (id in parcel.shaders.or([]))
+            {
+                if (prepared.exists(id))
+                {
+                    assets.push(prepared[id]);
                 }
             }
 
             // Serialise and compress the parcel.
             final serializer  = new Serializer();
-            final parcel      = new ParcelResource(parcel.name, finalAssets, parcel.depends);
+            final parcel      = new ParcelResource(parcel.name, assets, parcel.depends);
             final bytes       = serializer.serialize(parcel);
 
             File.saveBytes(Path.join([ output, parcel.name ]), Compress.run(bytes, 9));
@@ -257,86 +279,246 @@ class Tool
     }
 
     /**
-     * Finds all images and pre-calculated sprite sheets and packs them all together.
-     * @param _name Name of the parcel.
-     * @param _assets All the resources (including non image and sheet) to be included in the parcel.
-     * @param _images All image resources tracked in this project.
-     * @param _sheets All sheet resources tracked in this project.
+     * Pack all image related resources in the parcel and create frame resources for them.
+     * @param _parcel The parcel to pack.
+     * @param _images All image resources in this project.
+     * @param _sheets All image sheet resources in this project.
+     * @param _fonts All font resources in this project.
+     * @return Array<Resource>
      */
-    function generateAtlas(
-        _name : String,
-        _assets : Array<String>,
-        _images : Array<JsonResource>,
-        _sheets : Array<JsonResource>,
-        _fonts : Array<JsonResource>) : Array<Resource>
+    function packImages(_parcel : JsonParcel, _images : Array<JsonResource>, _sheets : Array<JsonResource>, _fonts : Array<JsonResource>) : Array<Resource>
     {
-        // Iterate over all assets to be included in this parcel and try and find a matching image or sheet ID.
-        // There's almost certainly a better way to deal with this, with many assets and parcels this looping could be quite slow.
+        // Parse, store, and copy all images into a temp directory in preperation for packing.
 
-        final parcelImages = [];
-        final parcelSheets = new Array<{ path : Path, pages : ReadOnlyArray<GdxPage> }>();
-        final parcelFonts  = new Array<{ path : Path, font : JsonFontDefinition }>();
+        final atlases = [];
+        final bmfonts = [];
 
-        for (asset in _assets)
+        for (id in _parcel.images.or([]))
         {
-            for (image in _images)
-            {
-                if (asset == image.id)
-                {
-                    parcelImages.push(image);
-                }
-            }
-            for (sheet in _sheets)
-            {
-                if (asset == sheet.id)
-                {
-                    parcelSheets.push({ path : new Path(sheet.path), pages : GdxParser.parse(sheet.path) });
-                }
-            }
-            for (font in _fonts)
-            {
-                if (asset == font.id)
-                {
+            _images
+                .find(image -> image.id == id)
+                .run(image -> File.copy(image.path, Path.join([ tempAssets, image.id + '.png' ])));
+        }
+        for (id in _parcel.sheets.or([]))
+        {
+            _sheets
+                .find(sheet -> sheet.id == id)
+                .run(sheet -> {
+                    final path  = new Path(sheet.path);
+                    final atlas = GdxParser.parse(sheet.path);
+
+                    for (page in atlas)
+                    {
+                        File.copy(
+                            Path.join([ path.dir, page.image.toString() ]),
+                            Path.join([ tempAssets, page.image.toString() ]));
+                    }
+
+                    atlases.push(atlas);
+                });
+        }
+        for (id in _parcel.fonts.or([]))
+        {
+            _fonts
+                .find(font -> font.id == id)
+                .run(font -> {
                     final path = new Path(font.path);
-                    final json = Path.join([ tempFonts, '${ path.file }.json' ]);
+                    path.dir = tempFonts;
+                    path.ext = 'json';
 
-                    parcelFonts.push({ path : path, font : tink.Json.parse(File.getContent(json)) });
+                    final bmfont : JsonFontDefinition = tink.Json.parse(File.getContent(path.toString()));
+
+                    File.copy(
+                        Path.join([ tempFonts, bmfont.pages[0] ]),
+                        Path.join([ tempAssets, bmfont.pages[0] ]));
+
+                    bmfonts.push(bmfont);
+                });
+        }
+
+        // Pack all of our collected images
+
+        final packFile = Path.join([ tempAssets, 'pack.json' ]);
+        final packJson = '{
+            "pot": true,
+            "paddingX": 0,
+            "paddingY": 0,
+            "bleed": true,
+            "bleedIterations": 2,
+            "edgePadding": true,
+            "duplicatePadding": false,
+            "rotation": false,
+            "minWidth": 16,
+            "minHeight": 16,
+            "maxWidth": 2048,
+            "maxHeight": 2048,
+            "square": false,
+            "stripWhitespaceX": false,
+            "stripWhitespaceY": false,
+            "alphaThreshold": 0,
+            "filterMin": "Nearest",
+            "filterMag": "Nearest",
+            "wrapX": "ClampToEdge",
+            "wrapY": "ClampToEdge",
+            "format": "RGBA8888",
+            "alias": true,
+            "outputFormat": "png",
+            "jpegQuality": 0.9,
+            "ignoreBlankImages": true,
+            "fast": false,
+            "debug": false,
+            "combineSubdirectories": false,
+            "flattenPaths": false,
+            "premultiplyAlpha": false,
+            "useIndexes": false,
+            "limitMemory": true,
+            "grid": false,
+            "scale": [ 1 ],
+            "scaleSuffix": [ "" ],
+            "scaleResampling": [ "bicubic" ]
+        }';
+
+        File.saveContent(packFile, packJson);
+
+        Sys.command('java', [
+            '-jar', 'C:/Users/AidanLee/Documents/atlas-test/runnable-texturepacker.jar',
+            tempAssets,   // input
+            tempAssets,   // output
+            _parcel.name, // atlas name
+            packFile      // atlas settings
+        ]);
+
+        // Read the packed result
+
+        final assets = new Array<Resource>();
+        final pages  = GdxParser.parse(Path.join([ tempAssets, '${ _parcel.name }.atlas' ]));
+
+        // Create images for all unique pages
+
+        for (page in pages)
+        {
+            final png = Path.join([ tempAssets, page.image.toString() ]);
+
+            assets.push(new ImageResource(
+                page.image.file,
+                page.width,
+                page.height,
+                imageBytes(png)));
+        }
+
+        // Search for all of our composited images within the pages
+
+        for (id in _parcel.images.or([]))
+        {
+            for (page in pages)
+            {
+                page
+                    .sections
+                    .find(section -> section.name == id)
+                    .run(section -> {
+                        assets.push(new ImageFrameResource(
+                            id,
+                            page.image.file,
+                            section.x,
+                            section.y,
+                            section.width,
+                            section.height,
+                            section.x / page.width,
+                            section.y / page.height,
+                            (section.x + section.width) / page.width,
+                            (section.y + section.height) / page.height));
+                    });
+            }
+        }
+
+        for (atlas in atlases)
+        {
+            for (page in atlas)
+            {
+                final found = findSection(page.image.file, pages).sure();
+
+                for (section in page.sections)
+                {
+                    assets.push(new ImageFrameResource(
+                        section.name,
+                        found.page.image.file,
+                        found.section.x + section.x,
+                        found.section.y + section.y,
+                        section.width,
+                        section.height,
+                        (found.section.x + section.x) / found.page.width,
+                        (found.section.y + section.y) / found.page.height,
+                        (found.section.x + section.x + section.width) / found.page.width,
+                        (found.section.y + section.y + section.height) / found.page.height));
+                }
+
+                continue;
+            }
+        }
+
+        for (bmfont in bmfonts)
+        {
+            final found = findSection(new Path(bmfont.pages[0]).file, pages).sure();
+            final chars = new Map<Int, Character>();
+
+            for (char in bmfont.chars)
+            {
+                if (char.page == 0)
+                {
+                    chars[char.id] = new Character(
+                        found.section.x + char.x,
+                        found.section.y + char.y,
+                        char.width,
+                        char.height,
+                        char.xoffset,
+                        char.yoffset,
+                        char.xadvance,
+                        (found.section.x + char.x) / found.page.width,
+                        (found.section.y + char.y) / found.page.height,
+                        (found.section.x + char.x + char.width) / found.page.width,
+                        (found.section.y + char.y + char.height) / found.page.height);
                 }
             }
+
+            assets.push(new FontResource(
+                found.section.name,
+                found.page.image.file,
+                chars,
+                found.section.x,
+                found.section.y,
+                found.section.width,
+                found.section.height,
+                found.section.x / found.page.width,
+                found.section.y / found.page.height,
+                (found.section.x + found.section.width) / found.page.width,
+                (found.section.y + found.section.height) / found.page.height));
+
+            continue;
         }
 
-        if (parcelImages.length == 0 && parcelSheets.length == 0 && parcelFonts.length == 0)
-        {
-            return [];
-        }
+        return assets;
+    }
 
-        // Copy all the images to a temp location
+    /**
+     * Find an atlas section and the page it is within.
+     * @param _name Name of the section to search for.
+     * @param _pages Structure containing the page and section.
+     */
+    function findSection(_name : String, _pages : ReadOnlyArray<GdxPage>) : { page : GdxPage, section : GdxSection }
+    {
+        for (page in _pages)
+        {
+            final section = page
+                .sections
+                .find(section -> section.name == _name);
 
-        for (image in parcelImages)
-        {
-            File.copy(image.path, Path.withExtension(Path.join([ tempAssets, image.id ]), 'png'));
-        }
-        for (sheets in parcelSheets)
-        {
-            for (page in sheets.pages)
+            if (section != null)
             {
-                File.copy(Path.join([ sheets.path.dir, page.image.toString() ]), Path.join([ tempAssets, page.image.toString() ]));
+                return { page : page, section : section };
             }
         }
-        for (font in parcelFonts)
-        {
-            for (page in font.font.pages)
-            {
-                File.copy(Path.join([ tempFonts, page ]), Path.join([ tempAssets, page ]));
-            }
-        }
 
-        // Pack all the images which have been copied over to the temp directory.
-        final packer = new GdxPacker(tempAssets, _name);
-        packer.pack();
-
-        // Create resources from the packed images.
-        return packer.resources(parcelSheets, parcelFonts);
+        return null;
     }
 
     /**
@@ -358,5 +540,21 @@ class Tool
                 FileSystem.deleteFile(path);
             }
         }
+    }
+
+    /**
+     * Get the BGRA bytes data of a png.
+     * @param _path Path to the image.
+     * @return Bytes
+     */
+    function imageBytes(_path : String) : Bytes
+    {
+        final input = File.read(_path);
+        final info  = new Reader(input).read();
+        final bytes = Tools.extract32(info);
+
+        input.close();
+
+        return bytes;
     }
 }

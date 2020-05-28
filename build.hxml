@@ -1,6 +1,7 @@
 -lib flurry
 -lib tink_cli
 -lib tink_json
+-lib safety
 
 -main src.Main
 

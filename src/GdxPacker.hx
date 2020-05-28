@@ -96,7 +96,7 @@ class GdxPacker
      * @param _sheets Array of all sheets and the path to them.
      * @return Array<Resource>
      */
-    public function resources(_sheets : Array<{ path : Path, pages : ReadOnlyArray<GdxPage> }>, _fonts : Array<{ path : Path, font : JsonFontDefinition }>) : Array<Resource>
+    public function resources() : Array<Resource>
     {
         final pages  = GdxParser.parse(Path.join([ directory, '$name.atlas' ]));
         final assets = new Array<Resource>();
@@ -107,73 +107,73 @@ class GdxPacker
 
             for (section in page.sections)
             {
-                switch findPage(section, _sheets, _fonts)
-                {
-                    case Sheet(_page):
-                        for (subSection in _page.sections)
-                        {
-                            final x = section.x + subSection.x;
-                            final y = section.y + subSection.y;
+                // switch findPage(section, _sheets, _fonts)
+                // {
+                //     case Sheet(_page):
+                //         for (subSection in _page.sections)
+                //         {
+                //             final x = section.x + subSection.x;
+                //             final y = section.y + subSection.y;
 
-                            assets.push(new ImageFrameResource(
-                                subSection.name,
-                                page.image.file,
-                                x,
-                                y,
-                                subSection.width,
-                                subSection.height,
-                                x / page.width,
-                                y / page.height,
-                                (x + subSection.width) / page.width,
-                                (y + subSection.height) / page.height));
-                        }
-                    case Font(_font):
-                        final chars = new Map<Int, Character>();
+                //             assets.push(new ImageFrameResource(
+                //                 subSection.name,
+                //                 page.image.file,
+                //                 x,
+                //                 y,
+                //                 subSection.width,
+                //                 subSection.height,
+                //                 x / page.width,
+                //                 y / page.height,
+                //                 (x + subSection.width) / page.width,
+                //                 (y + subSection.height) / page.height));
+                //         }
+                //     case Font(_font):
+                //         final chars = new Map<Int, Character>();
 
-                        for (char in _font.chars)
-                        {
-                            if (char.page == 0)
-                            {
-                                chars[char.id] = new Character(
-                                    section.x + char.x,
-                                    section.y + char.y,
-                                    char.width,
-                                    char.height,
-                                    char.xoffset,
-                                    char.yoffset,
-                                    char.xadvance,
-                                    (section.x + char.x) / page.width,
-                                    (section.y + char.y) / page.height,
-                                    (section.x + char.x + char.width) / page.width,
-                                    (section.y + char.y + char.height) / page.height);
-                            }
-                        }
+                //         for (char in _font.chars)
+                //         {
+                //             if (char.page == 0)
+                //             {
+                //                 chars[char.id] = new Character(
+                //                     section.x + char.x,
+                //                     section.y + char.y,
+                //                     char.width,
+                //                     char.height,
+                //                     char.xoffset,
+                //                     char.yoffset,
+                //                     char.xadvance,
+                //                     (section.x + char.x) / page.width,
+                //                     (section.y + char.y) / page.height,
+                //                     (section.x + char.x + char.width) / page.width,
+                //                     (section.y + char.y + char.height) / page.height);
+                //             }
+                //         }
 
-                        assets.push(new FontResource(
-                            section.name,
-                            page.image.file,
-                            chars,
-                            section.x,
-                            section.y,
-                            section.width,
-                            section.height,
-                            section.x / page.width,
-                            section.y / page.height,
-                            (section.x + section.width) / page.width,
-                            (section.y + section.height) / page.height));
-                    case Error:
-                        assets.push(new ImageFrameResource(
-                            section.name,
-                            page.image.file,
-                            section.x,
-                            section.y,
-                            section.width,
-                            section.height,
-                            section.x / page.width,
-                            section.y / page.height,
-                            (section.x + section.width) / page.width,
-                            (section.y + section.height) / page.height));
-                }
+                //         assets.push(new FontResource(
+                //             section.name,
+                //             page.image.file,
+                //             chars,
+                //             section.x,
+                //             section.y,
+                //             section.width,
+                //             section.height,
+                //             section.x / page.width,
+                //             section.y / page.height,
+                //             (section.x + section.width) / page.width,
+                //             (section.y + section.height) / page.height));
+                //     case Error:
+                //         assets.push(new ImageFrameResource(
+                //             section.name,
+                //             page.image.file,
+                //             section.x,
+                //             section.y,
+                //             section.width,
+                //             section.height,
+                //             section.x / page.width,
+                //             section.y / page.height,
+                //             (section.x + section.width) / page.width,
+                //             (section.y + section.height) / page.height));
+                // }
             }
         }
 
@@ -194,35 +194,5 @@ class GdxPacker
         input.close();
 
         return bytes;
-    }
-
-    /**
-     * Searches the sheet pages for one which has a matching name with the provided section.
-     * @param _section Section to find the matching source page.
-     * @param _sheets Source asset sheets to search.
-     * @return SearchResult
-     */
-    function findPage(_section : GdxSection, _sheets : Array<{ path : Path, pages : ReadOnlyArray<GdxPage> }>, _fonts : Array<{ path : Path, font : JsonFontDefinition }>) : SearchResult
-    {
-        for (sheet in _sheets)
-        {
-            for (page in sheet.pages)
-            {
-                if (page.image.file == _section.name)
-                {
-                    return Sheet(page);
-                }
-            }
-        }
-
-        for (font in _fonts)
-        {
-            if (font.font.info.face == _section.name)
-            {
-                return Font(font.font);
-            }
-        }
-
-        return Error;
     }
 }
