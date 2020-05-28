@@ -1,15 +1,13 @@
-package src;
-
-import format.png.Tools;
-import format.png.Reader;
-import haxe.io.Bytes;
-import src.GdxParser;
-import src.Types;
-import haxe.ds.ReadOnlyArray;
+import Types;
+import GdxParser;
 import haxe.io.Path;
+import haxe.io.Bytes;
+import haxe.ds.ReadOnlyArray;
 import haxe.zip.Compress;
 import sys.FileSystem;
 import sys.io.File;
+import format.png.Tools;
+import format.png.Reader;
 import hxbit.Serializer;
 import tink.Cli;
 import uk.aidanlee.flurry.api.resources.Resource;
@@ -81,8 +79,9 @@ class Tool
      */
     @:command
     public function pack()
-    {
+    {       
         final project  = parse();
+        final baseDir  = Path.directory(input);
         final prepared = new Map<String, Resource>();
 
         FileSystem.createDirectory(tempAssets);
@@ -92,24 +91,24 @@ class Tool
 
         for (shader in project.assets.shaders)
         {
-            prepared[shader.id] = createShader(shader);
+            prepared[shader.id] = createShader(baseDir, shader);
         }
 
         for (text in project.assets.texts)
         {
-            prepared[text.id] = new TextResource(text.id, File.getContent(text.path));
+            prepared[text.id] = new TextResource(text.id, File.getContent(Path.join([ baseDir, text.path ])));
         }
 
         for (bytes in project.assets.bytes)
         {
-            prepared[bytes.id] = new BytesResource(bytes.id, File.getBytes(bytes.path));
+            prepared[bytes.id] = new BytesResource(bytes.id, File.getBytes(Path.join([ baseDir, bytes.path ])));
         }
 
         for (font in project.assets.fonts)
         {
             Sys.command('npx', [
                 'msdf-bmfont',
-                font.path,
+                Path.join([ baseDir, font.path ]),
                 '-f', 'json',
                 '-o', Path.join([ tempFonts, font.id ]),
                 '-p', '2',
@@ -125,7 +124,7 @@ class Tool
                 if (parcel.images == null && parcel.sheets == null && parcel.fonts == null)
                     [];
                 else
-                    packImages(parcel, project.assets.images, project.assets.sheets, project.assets.fonts);
+                    packImages(baseDir, parcel, project.assets.images, project.assets.sheets, project.assets.fonts);
 
             for (id in parcel.texts.or([]))
             {
@@ -186,11 +185,12 @@ class Tool
 
     /**
      * Creates a shader resource based on the provided info.
+     * @param _baseDir Base directory to prepend to asset paths
      * @param _shader Info for the shader to create.
      */
-    function createShader(_shader : JsonShaderResource) : ShaderResource
+    function createShader(_baseDir : String, _shader : JsonShaderResource) : ShaderResource
     {
-        final shaderDefinition : JsonShaderDefinition = tink.Json.parse(File.getContent(_shader.path));
+        final shaderDefinition : JsonShaderDefinition = tink.Json.parse(File.getContent(Path.join([ _baseDir, _shader.path ])));
 
         final layout = new ShaderLayout(
             shaderDefinition.textures, [
@@ -207,29 +207,39 @@ class Tool
         {
             ogl3Source = new ShaderSource(
                 false,
-                File.getBytes(_shader.ogl3.vertex),
-                File.getBytes(_shader.ogl3.fragment));
+                File.getBytes(Path.join([ _baseDir, _shader.ogl3.vertex ])),
+                File.getBytes(Path.join([ _baseDir, _shader.ogl3.fragment ])));
         }
         if (_shader.ogl4 != null)
         {
             if (_shader.ogl4.compiled)
             {
-                ogl4Source = ogl4Compile(_shader.ogl4.vertex, _shader.ogl4.fragment);
+                ogl4Source = ogl4Compile(
+                    Path.join([ _baseDir, _shader.ogl4.vertex ]),
+                    Path.join([ _baseDir, _shader.ogl4.fragment ]));
             }
             else
             {
-                ogl4Source = new ShaderSource(false, File.getBytes(_shader.ogl4.vertex), File.getBytes(_shader.ogl4.fragment));
+                ogl4Source = new ShaderSource(
+                    false,
+                    File.getBytes(Path.join([ _baseDir, _shader.ogl4.vertex ])),
+                    File.getBytes(Path.join([ _baseDir, _shader.ogl4.fragment ])));
             }
         }
         if (_shader.hlsl != null)
         {
             if (_shader.hlsl.compiled)
             {
-                hlslSource = hlslCompile(_shader.hlsl.vertex,_shader.hlsl.fragment);
+                hlslSource = hlslCompile(
+                    Path.join([ _baseDir, _shader.hlsl.vertex ]),
+                    Path.join([ _baseDir, _shader.hlsl.fragment ]));
             }
             else
             {
-                hlslSource = new ShaderSource(false, File.getBytes(_shader.hlsl.vertex), File.getBytes(_shader.hlsl.fragment));
+                hlslSource = new ShaderSource(
+                    false,
+                    File.getBytes(Path.join([ _baseDir, _shader.hlsl.vertex ])),
+                    File.getBytes(Path.join([ _baseDir, _shader.hlsl.fragment ])));
             }
         }
 
@@ -283,13 +293,14 @@ class Tool
 
     /**
      * Pack all image related resources in the parcel and create frame resources for them.
+     * @param _baseDir Base directory to prepend to asset paths
      * @param _parcel The parcel to pack.
      * @param _images All image resources in this project.
      * @param _sheets All image sheet resources in this project.
      * @param _fonts All font resources in this project.
      * @return Array<Resource>
      */
-    function packImages(_parcel : JsonParcel, _images : Array<JsonResource>, _sheets : Array<JsonResource>, _fonts : Array<JsonResource>) : Array<Resource>
+    function packImages(_baseDir : String, _parcel : JsonParcel, _images : Array<JsonResource>, _sheets : Array<JsonResource>, _fonts : Array<JsonResource>) : Array<Resource>
     {
         // Parse, store, and copy all images into a temp directory in preperation for packing.
 
@@ -300,15 +311,15 @@ class Tool
         {
             _images
                 .find(image -> image.id == id)
-                .run(image -> File.copy(image.path, Path.join([ tempAssets, image.id + '.png' ])));
+                .run(image -> File.copy(Path.join([ _baseDir, image.path ]), Path.join([ tempAssets, image.id + '.png' ])));
         }
         for (id in _parcel.sheets.or([]))
         {
             _sheets
                 .find(sheet -> sheet.id == id)
                 .run(sheet -> {
-                    final path  = new Path(sheet.path);
-                    final atlas = GdxParser.parse(sheet.path);
+                    final path  = new Path(Path.join([ _baseDir, sheet.path ]));
+                    final atlas = GdxParser.parse(path.toString());
 
                     for (page in atlas)
                     {

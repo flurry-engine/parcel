@@ -1,6 +1,3 @@
-package src;
-
-import src.Tool;
 import tink.Cli;
 
 class Main

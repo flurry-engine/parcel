@@ -1,5 +1,3 @@
-package src;
-
 import sys.io.File;
 import haxe.io.Path;
 import haxe.io.Input;

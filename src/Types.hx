@@ -1,5 +1,3 @@
-package src;
-
 import uk.aidanlee.flurry.api.resources.Resource.ShaderType;
 
 typedef JsonResource = {
