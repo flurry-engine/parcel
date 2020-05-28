@@ -43,6 +43,8 @@ class Tool
      */
     public var hlslCompiler : String;
 
+    final tempBase : String;
+
     final tempAssets : String;
 
     final tempFonts : String;
@@ -54,9 +56,9 @@ class Tool
         glslCompiler = 'glslangValidator';
         hlslCompiler = 'fxc';
 
-        final baseTemp = Path.join([ 'bin', 'temp' ]);
-        tempAssets = Path.join([ baseTemp, 'assets' ]);
-        tempFonts  = Path.join([ baseTemp, 'fonts' ]);
+        tempBase   = Path.join([ 'bin', 'temp' ]);
+        tempAssets = Path.join([ tempBase, 'assets' ]);
+        tempFonts  = Path.join([ tempBase, 'fonts' ]);
     }
 
     @:defaultCommand
@@ -154,13 +156,14 @@ class Tool
 
             File.saveBytes(Path.join([ output, parcel.name ]), Compress.run(bytes, 9));
 
-            // clean(tempAssets);
+            clean(tempAssets);
         }
 
-        // clean(tempFonts);
+        clean(tempFonts);
 
-        // FileSystem.deleteDirectory(tempAssets);
-        // FileSystem.deleteDirectory(tempFonts);
+        FileSystem.deleteDirectory(tempAssets);
+        FileSystem.deleteDirectory(tempFonts);
+        FileSystem.deleteDirectory(tempBase);
     }
 
     /**
