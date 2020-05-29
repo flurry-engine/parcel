@@ -1,6 +1,3 @@
--D RxHaxe=0.0.0
-# @install: lix --silent download "gh://github.com/aidan63/RxHaxe#3c378640d3e2577756fc563b5a51be205633a047" into RxHaxe/0.0.0/github/3c378640d3e2577756fc563b5a51be205633a047
--lib exception
--lib haxe-concurrent
--lib safety
--cp ${HAXE_LIBCACHE}/RxHaxe/0.0.0/github/3c378640d3e2577756fc563b5a51be205633a047/
+-D RxHaxe=undefined
+# @install: lix --silent download "gh://github.com/aidan63/RxHaxe#ddae04c31b5a77070aaf61791dd0ea6f0a5878ff" into RxHaxe//github/ddae04c31b5a77070aaf61791dd0ea6f0a5878ff
+-cp ${HAXE_LIBCACHE}/RxHaxe//github/ddae04c31b5a77070aaf61791dd0ea6f0a5878ff/src

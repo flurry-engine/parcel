@@ -3,7 +3,8 @@
 -lib flurry
 -lib tink_cli
 -lib tink_json
+-lib safety
 
 -main Main
 
--neko run.n
+--neko run.n
