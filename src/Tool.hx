@@ -41,6 +41,20 @@ class Tool
      */
     public var hlslCompiler : String;
 
+    /**
+     * Path to the libgdx texturepacker jar.
+     */
+    @:flag('--gdx-jar')
+    @:alias(false)
+    public var gdxJar : String;
+
+    /**
+     * Path to the msdf-atlas-gen executable.
+     */
+    @:flag('--msdf-atlas-gen')
+    @:alias(false)
+    public var msdfAtlasGen : String;
+
     final tempBase : String;
 
     final tempAssets : String;
@@ -395,7 +409,7 @@ class Tool
         File.saveContent(packFile, packJson);
 
         Sys.command('java', [
-            '-jar', Sys.getEnv('GDX_PACKER_JAR'),
+            '-jar', gdxJar,
             tempAssets,   // input
             tempAssets,   // output
             _parcel.name, // atlas name
