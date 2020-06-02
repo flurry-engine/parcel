@@ -58,64 +58,43 @@ typedef JsonDefinition = {
     var parcels : Array<JsonParcel>;
 }
 
-typedef JsonFontChar = {
-    var id : Int;
-    var index : Int;
-    var char : String;
+typedef JsonFontAtlas = {
+    var type : String;
+    var distanceRange : Int;
+    var size : Int;
     var width : Int;
     var height : Int;
-    var xoffset : Int;
-    var yoffset : Int;
-    var xadvance : Int;
-    var chnl : Int;
-    var x : Int;
-    var y : Int;
-    var page : Int;
+    var yOrigin : String;
 }
 
-typedef JsonFontKerning = {
-    var first : Int;
-    var second : Int;
-    var amount : Int;
+typedef JsonFontMetrics = {
+    var lineHeight : Float;
+    var ascender : Float;
+    var descender : Float;
+    var underlineY : Float;
+    var underlineThickness : Float;
 }
 
-typedef JsonFontInfo = {
-    var face : String;
-    var size : Int;
-    var bold : Int;
-    var italic : Int;
-    var charset : Array<String>;
+typedef JsonFontGlyph = {
     var unicode : Int;
-    var stretchH : Int;
-    var smooth : Int;
-    var aa : Int;
-    var padding : Array<Int>;
-    var spacing : Array<Int>;
-}
-
-typedef JsonFontCommon = {
-    var lineHeight : Int;
-    var base : Int;
-    var scaleW : Int;
-    var scaleH : Int;
-    var pages : Int;
-    var packed : Int;
-    var alphaChnl : Int;
-    var redChnl : Int;
-    var greenChnl : Int;
-    var blueChnl : Int;
-}
-
-typedef JsonFontDistanceField = {
-    var fieldType : String;
-    var distanceRange : Int;
+    var advance : Float;
+    var ?planeBounds : {
+        var left : Float;
+        var bottom : Float;
+        var right : Float;
+        var top : Float;
+    }
+    var ?atlasBounds : {
+        var left : Float;
+        var bottom : Float;
+        var right : Float;
+        var top : Float;
+    }
 }
 
 typedef JsonFontDefinition = {
-    var pages : Array<String>;
-    var chars : Array<JsonFontChar>;
-    var info : JsonFontInfo;
-    var common : JsonFontCommon;
-    var distanceField : JsonFontDistanceField;
-    var kernings : Array<JsonFontKerning>;
+    var atlas : JsonFontAtlas;
+    var metrics : JsonFontMetrics;
+    var glyphs : Array<JsonFontGlyph>;
+    var kerning : Array<Dynamic>;
 }
