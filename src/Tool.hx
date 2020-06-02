@@ -120,14 +120,16 @@ class Tool
 
         for (font in project.assets.fonts)
         {
-            Sys.command('npx', [
-                'msdf-bmfont',
+            final out = Path.join([ tempFonts, font.id ]);
+
+            Sys.command(msdfAtlasGen, [
+                '-font',
                 Path.join([ baseDir, font.path ]),
-                '-f', 'json',
-                '-o', Path.join([ tempFonts, font.id ]),
-                '-p', '2',
-                '--smart-size',
-                '--pot' ]);
+                '-type', 'msdf',
+                '-format', 'png',
+                '-imageout', out + '.png',
+                '-json', out + '.json',
+                '-size', '48' ]);
         }
 
         clean(tempAssets);
@@ -350,17 +352,19 @@ class Tool
             _fonts
                 .find(font -> font.id == id)
                 .run(font -> {
-                    final path = new Path(font.path);
+                    final path = new Path(font.id);
                     path.dir = tempFonts;
                     path.ext = 'json';
 
                     final bmfont : JsonFontDefinition = tink.Json.parse(File.getContent(path.toString()));
 
-                    File.copy(
-                        Path.join([ tempFonts, bmfont.pages[0] ]),
-                        Path.join([ tempAssets, bmfont.pages[0] ]));
+                    final image = font.id + '.png';
 
-                    bmfonts.push(bmfont);
+                    File.copy(
+                        Path.join([ tempFonts, image ]),
+                        Path.join([ tempAssets, image ]));
+
+                    bmfonts.push({ id : font.id, font : bmfont });
                 });
         }
 
@@ -486,25 +490,40 @@ class Tool
 
         for (bmfont in bmfonts)
         {
-            final found = findSection(new Path(bmfont.pages[0]).file, pages).sure();
+            final found = findSection(bmfont.id, pages).sure();
             final chars = new Map<Int, Character>();
 
-            for (char in bmfont.chars)
+            for (char in bmfont.font.glyphs)
             {
-                if (char.page == 0)
+                if (char.atlasBounds != null && char.planeBounds != null)
                 {
-                    chars[char.id] = new Character(
-                        found.section.x + char.x,
-                        found.section.y + char.y,
-                        char.width,
-                        char.height,
-                        char.xoffset,
-                        char.yoffset,
-                        char.xadvance,
-                        (found.section.x + char.x) / found.page.width,
-                        (found.section.y + char.y) / found.page.height,
-                        (found.section.x + char.x + char.width) / found.page.width,
-                        (found.section.y + char.y + char.height) / found.page.height);
+                    // glyph atlas coords are packed bottom left origin so we transform to top left origin
+                    final ax = char.atlasBounds.left;
+                    final ay = (bmfont.font.atlas.height - char.atlasBounds.top);
+                    final aw = char.atlasBounds.right - char.atlasBounds.left;
+                    final ah = (bmfont.font.atlas.height - char.atlasBounds.bottom) - (bmfont.font.atlas.height - char.atlasBounds.top);
+
+                    final pLeft   = char.planeBounds.left;
+                    final pTop    = 1 - char.planeBounds.top;
+                    final pRight  = char.planeBounds.right;
+                    final pBottom = 1 - char.planeBounds.bottom;
+
+                    chars[char.unicode] = new Character(
+                        pLeft,
+                        pTop,
+                        pRight,
+                        pBottom,
+                        0,
+                        0,
+                        char.advance,
+                        (found.section.x + ax) / found.page.width,
+                        (found.section.y + ay) / found.page.height,
+                        (found.section.x + ax + aw) / found.page.width,
+                        (found.section.y + ay + ah) / found.page.height);
+                }
+                else
+                {
+                    chars[char.unicode] = new Character(0, 0, 0, 0, 0, 0, char.advance, 0, 0, 1, 1);
                 }
             }
 
